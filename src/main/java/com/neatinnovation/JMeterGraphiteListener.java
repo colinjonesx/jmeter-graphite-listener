@@ -1,5 +1,6 @@
 package com.neatinnovation;
 
+import java.io.Serializable;
 import java.net.InetSocketAddress;
 import java.util.concurrent.TimeUnit;
 
@@ -15,48 +16,52 @@ import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.graphite.Graphite;
 import com.codahale.metrics.graphite.GraphiteReporter;
 
-public class JMeterGraphiteListener extends AbstractListenerElement implements TestStateListener, SampleListener {
+public class JMeterGraphiteListener 
+		extends AbstractListenerElement 
+		implements TestStateListener, SampleListener, Serializable {
 
 	private static final long serialVersionUID = 1L;
 	final MetricRegistry registry = new MetricRegistry();
-	final Graphite graphite = new Graphite(new InetSocketAddress("holly.ceejay.local", 2003));
-	final GraphiteReporter reporter = GraphiteReporter.forRegistry(registry)
-	                                                  .prefixedWith("jmeter")
-	                                                  .convertRatesTo(TimeUnit.SECONDS)
-	                                                  .convertDurationsTo(TimeUnit.MILLISECONDS)
-	                                                  .filter(MetricFilter.ALL)
-	                                                  .build(graphite);
+	Graphite graphite;
+	GraphiteReporter reporter;
+	private int period = 10;
+	private String serverHost;
+	private int serverPort;
+	private String metricPrefix;
+	
 	public JMeterGraphiteListener(){
-		reporter.start(10, TimeUnit.SECONDS);
+		super();
 	}
 	
-	public void testEnded() {
-		// TODO Auto-generated method stub
-		
-	}
-
-	public void testEnded(String arg0) {
-		// TODO Auto-generated method stub
-		
+	public void testStarted(String arg0) {
+		this.testStarted();
 	}
 
 	public void testStarted() {
-		// TODO Auto-generated method stub
-		
+		graphite = new Graphite(new InetSocketAddress(serverHost, serverPort));
+		reporter = GraphiteReporter.forRegistry(registry)
+                .prefixedWith(this.metricPrefix)
+                .convertRatesTo(TimeUnit.SECONDS)
+                .convertDurationsTo(TimeUnit.MILLISECONDS)
+                .filter(MetricFilter.ALL)
+                .build(graphite);
+		reporter.start(this.period, TimeUnit.SECONDS);
+	}
+	
+	public void testEnded() {
+		reporter.stop();
 	}
 
-	public void testStarted(String arg0) {
-		// TODO Auto-generated method stub
-		
+	public void testEnded(String arg0) {
+		testEnded();
 	}
+
 
 	public void testIterationStart(LoopIterationEvent arg0) {
 		registry.counter(arg0.getSource().getThreadName()).inc();
 		
 	}
 	
-	
-
 	public void sampleOccurred(SampleEvent event) {
 		SampleResult result = event.getResult();
 		if(result.isSuccessful()){
@@ -77,4 +82,35 @@ public class JMeterGraphiteListener extends AbstractListenerElement implements T
 		
 	}
 
+	public void setPeriod(String text) {
+		this.period = Integer.parseInt(text);
+	}
+
+	public void setServerHost(String serverHost) {
+		this.serverHost = serverHost;
+	}
+	
+	public void setServerPort(int serverPort) {
+		this.serverPort = serverPort;
+	}
+
+	public void setMetricPrefix(String text) {
+		this.metricPrefix = text;
+	}
+
+	public String getPeriod() {
+		return this.period+"";
+	}
+	
+	public String getServerHost(){
+		return this.serverHost;
+	}
+	
+	public int getServerPort(){
+		return this.serverPort;
+	}
+	
+	public String getMetricPrefix(){
+		return this.metricPrefix;
+	}
 }
